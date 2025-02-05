@@ -13,6 +13,7 @@ const dbPassword=process.env.DB_PASSWORD
 console.log(dbPassword);
 mongoose.connect(`mongodb+srv://stnamitha2003:${dbPassword}@cluster0.hys25.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`)
 
+
 .then(res=>{
     console.log("db connected successfully");
     
@@ -37,44 +38,41 @@ app.get('/', (req, res) => {
   res.json({taskItems,count:taskItems.length})
   })
   .catch(err=>{
-
+    console.error("Error fetching tasks:", err);
+    res.status(500).json({ message: "Error fetching tasks" });
   })
  
 })
-const { v4: uuidv4 } = require('uuid');
+//const { v4: uuidv4 } = require('uuid');
 app.post('/', (req, res) => { 
-    console.log(req.body)
-    const task=req.body.task
-    Task.create({task:task, isCompleted:false})
-    res.json("success")
-  })
-app.delete("/task/:id", (req, res) => {
-
-    Task.findByIdAndDelete(req.params.id)
-    .then(data=>{
-     
-    res.send("deleted")
-    })
-    .catch(err=>{
-  res.status(404).json({ message: "Task not found" });
-    })
+  const task = req.body.task;  // Get the task from request body
+  Task.create({ task: task, isCompleted: false })  // Store in MongoDB
+      .then(() => {
+          res.json({ message: "Task added successfully" }); // Send success response
+      })
+      .catch((err) => {
+          console.error("Error adding task:", err);
+          res.status(500).json({ message: "Error adding task" });
+      });
+});
+app.delete("/task/:id", async (req, res) => {
+  try {
+      const deletedTask = await Task.findByIdAndDelete(req.params.id);
+      if (!deletedTask) return res.status(404).json({ message: "Task not found" });
+      res.json({ message: "Deleted", deletedTask });
+  } catch (err) {
+      res.status(500).json({ message: "Error deleting task", error: err });
+  }
 });
 
-   app.put('/task/:id', (req, res) => {
-    const { id } = req.params; // Extract the task ID from the URL
-    const { task } = req.body; 
-    Task.findByIdAndUpdate(id, { task}, {new:true})
-    .then(updatedTask=>{
-      if (updatedTask) {
-        res.json({ message: "Task updated successfully", task: updatedTask });
-    } else {
-        res.status(404).json({ message: "Task not found" });
-    }
-})
-.catch(err => {
-    console.error("Error updating task:", err);
-    res.status(500).json({ message: "Error updating task" });
-});
+app.put('/task/:id', async (req, res) => {
+  try {
+      const updatedTask = await Task.findByIdAndUpdate(req.params.id, { task: req.body.task }, { new: true });
+      if (!updatedTask) return res.status(404).json({ message: "Task not found" });
+      res.json({ message: "Task updated successfully", task: updatedTask });
+  } catch (err) {
+      res.status(500).json({ message: "Error updating task", error: err });
+  }
 });
     
     
